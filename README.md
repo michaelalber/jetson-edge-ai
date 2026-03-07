@@ -5,11 +5,13 @@ exploring real-time inference, sensor integration, and .NET-based monitoring das
 
 ## Goal
 
-Build practical, end-to-end Edge AI projects using:
+Build practical, end-to-end Edge AI and Industrial Automation projects using:
 - **Python** — inference pipelines, sensor drivers, Ollama LLM integration
 - **.NET / C# (Blazor)** — monitoring dashboards and administrative interfaces
 - **TensorRT / ONNX** — model optimization for on-device inference
 - **Docker** — reproducible, containerized deployments on the Jetson
+- **OPC-UA + MQTT** — industrial protocol integration (asyncua, aiomqtt, Mosquitto)
+- **PLC / Modbus** — reading field device data from industrial controllers
 
 ## Repository Structure
 
@@ -23,7 +25,8 @@ jetson-edge-ai/
 │   ├── sensor-pipeline/        # I2C / SPI / GPIO data ingestion (Python)
 │   ├── anomaly-detection/      # Statistical anomaly detection on sensor streams (Python)
 │   ├── llm-inference/          # On-device LLM with Ollama (Python)
-│   └── monitoring-dashboard/   # Real-time monitoring UI (.NET Blazor)
+│   ├── monitoring-dashboard/   # Real-time monitoring UI (.NET Blazor)
+│   └── industrial-gateway/     # OPC-UA client + MQTT publisher bridge (Python)
 ├── shared/                     # Utilities shared across 2+ projects (added when needed)
 ├── infrastructure/
 │   ├── docker/                 # Container definitions per project
@@ -40,6 +43,7 @@ jetson-edge-ai/
 | [anomaly-detection](projects/anomaly-detection/) | Outlier detection on sensor time-series | Python, statistical models |
 | [llm-inference](projects/llm-inference/) | Local LLM chat and RAG experiments | Python, Ollama |
 | [monitoring-dashboard](projects/monitoring-dashboard/) | Live metrics and device management UI | .NET 10, Blazor |
+| [industrial-gateway](projects/industrial-gateway/) | OPC-UA client + MQTT publisher bridge | Python, asyncua, aiomqtt |
 
 ## Getting Started
 

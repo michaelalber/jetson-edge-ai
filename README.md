@@ -1,4 +1,4 @@
-# jetson-edge-ai
+# Jetson Edge AI — Physical AI & Industrial Automation
 
 Edge AI and Industrial Automation on the NVIDIA Jetson Orin Nano — a learning repository
 exploring real-time inference, sensor integration, and .NET-based monitoring dashboards.

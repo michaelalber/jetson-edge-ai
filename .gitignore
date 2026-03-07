@@ -2,6 +2,28 @@
 .claude/
 .opencode/
 
+# Model weights (large binary files — use download scripts instead)
+*.pt
+*.pth
+*.onnx
+*.engine
+*.gguf
+*.bin
+*.safetensors
+
+# .NET / C#
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+*.nupkg
+*.snupkg
+TestResults/
+coverage/
+*.trx
+*.opencover.xml
+
 # JetBrains IDE (full exclude)
 .idea/
 

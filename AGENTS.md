@@ -1,10 +1,52 @@
-# AGENTS.md
+# Jetson Edge AI — Project Context
 
-This file provides guidance to AI coding agents (such as opencode) when working with code in this repository.
+This is the project-level AGENTS.md for OpenCode. It supplements the global AGENTS.md — it does
+not replace it. Global standards (coding style, security rules, quality gates) live in the global
+file. This file contains only what is specific to this project.
 
-## Repository Purpose
+---
 
-Learning repository for Edge AI and Industrial Automation on the NVIDIA Jetson Orin Nano (arm64, 8 GB unified memory, JetPack 6.x / L4T r36). Projects are self-contained and developed independently.
+## Project Overview
+
+- **Name:** Jetson Edge AI
+- **Purpose:** Learning repository for Edge AI and Industrial Automation on the NVIDIA Jetson Orin Nano — building practical, end-to-end projects covering inference pipelines, sensor integration, industrial protocol bridging, and real-time monitoring dashboards.
+- **Phase:** Discovery
+- **Jira project key:** N/A — no issue tracker; confirm active task with the user at session start.
+- **Confluence space:** N/A — no wiki; ADRs live in `docs/adr/`.
+- **Definition of success:** Each sub-project under `projects/` contains a working, tested implementation that runs on-device (arm64, JetPack 6.x) and demonstrates the named capability end-to-end.
+
+---
+
+## Technology Stack
+
+- **Language(s):** Python 3.10+ (inference / sensor / automation); C# 13 / .NET 10 (monitoring dashboard)
+- **Framework(s):** asyncua (OPC-UA), aiomqtt (MQTT), pymodbus (Modbus TCP), OpenCV, TensorRT Python API, Ollama Python client; .NET: Blazor Server + SignalR
+- **Database:** None decided — metrics streamed in-memory; persistence is an open loop
+- **UI library:** Blazor Server built-in components (no third-party component library chosen yet)
+- **Test framework:** pytest + pytest-asyncio (Python); xUnit (.NET)
+- **CI/CD:** None yet — local `pytest` / `dotnet test` only
+- **Package manager:** pip via `pyproject.toml` (Python); NuGet (.NET)
+
+---
+
+## Architecture
+
+- **Pattern:** Feature-per-project — each directory under `projects/` is a self-contained vertical slice with its own `pyproject.toml` or `.sln`. The .NET dashboard uses vertical slice feature folders under `Features/`.
+- **Entry points:** `projects/<name>/src/<name>/main.py` (Python, not yet scaffolded); `projects/monitoring-dashboard/src/Dashboard/Program.cs` (.NET, not yet scaffolded)
+- **Key directories:**
+  - `projects/` — six independent sub-projects (see layout below)
+  - `infrastructure/docker/` — per-project Dockerfiles (arm64 / L4T base images)
+  - `infrastructure/scripts/` — Jetson provisioning and deploy scripts
+  - `docs/adr/` — Architecture Decision Records; read before any new technology decision
+  - `models/` — configs and conversion scripts only; weights are gitignored
+  - `shared/` — empty; only add code here when two or more projects genuinely share it
+- **Non-obvious constraints:**
+  - GPU libraries (TensorRT, CUDA) are only available on-device or inside L4T containers — expect CPU-only fallbacks in local dev; skip GPU-dependent tests on non-Jetson machines.
+  - 8 GB unified memory is shared between CPU and GPU — LLM models must leave headroom for OS and inference runtime.
+  - Never cross-import between `projects/` sub-directories — each project must be independently deployable.
+  - Blazor Server requires a persistent SignalR connection; acceptable for LAN-deployed dashboards only.
+
+---
 
 ## Project Layout
 
@@ -20,10 +62,10 @@ infrastructure/
   docker/               # Per-project Dockerfiles (L4T base images for GPU projects)
   scripts/              # Jetson provisioning and deploy scripts
 models/                 # Configs and conversion scripts only — weights are gitignored
-docs/adr/               # Architecture Decision Records (read before making new decisions)
+docs/adr/               # Architecture Decision Records
 ```
 
-Each Python project is self-contained with its own `pyproject.toml` and `.venv`. The .NET project has its own `.sln` and `.csproj`.
+---
 
 ## Development Commands
 
@@ -33,19 +75,19 @@ Each Python project is self-contained with its own `pyproject.toml` and `.venv`.
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-pytest                          # all tests
+pytest                              # all tests
 pytest tests/test_foo.py::test_bar  # single test
-ruff check src/ tests/          # lint
-mypy src/                       # type check
+ruff check src/ tests/              # lint
+mypy src/                           # type check
 ```
 
-### .NET dashboard (run from `projects/monitoring-dashboard/`)
+### .NET dashboard (`projects/monitoring-dashboard/`)
 
 ```bash
 dotnet restore
 dotnet build
 dotnet test
-dotnet test --filter "FullyQualifiedName~SomeTest"   # single test
+dotnet test --filter "FullyQualifiedName~SomeTest"
 dotnet run --project src/Dashboard
 ```
 
@@ -55,7 +97,6 @@ dotnet run --project src/Dashboard
 # Enable arm64 emulation once on an x86 host
 docker run --privileged --rm tonistiigi/binfmt --install arm64
 
-# Build a project image
 docker buildx build \
   --platform linux/arm64 \
   -t jetson-edge-ai/<project-name>:latest \
@@ -63,57 +104,102 @@ docker buildx build \
   projects/<project-name>
 ```
 
-## Architecture Decisions (ADRs)
+---
 
-Before making a new technology or pattern decision, read `docs/adr/`. Active decisions:
+## Key Files
 
-- **ADR-001** Python 3.10+ with `pyproject.toml` for all inference/sensor pipelines
-- **ADR-002** .NET 10 Blazor Server (SignalR) for the monitoring dashboard
-- **ADR-003** Ollama for on-device LLM; GGUF quantized models sized to fit in ~6 GB
-- **ADR-004** Docker with NVIDIA L4T base images; `--platform linux/arm64` for cross-builds
-- **ADR-005** OPC-UA (`asyncua`) + MQTT (`aiomqtt`) as industrial integration protocols
+| File | Why It Matters |
+|---|---|
+| `docs/adr/` | Five active ADRs — read before any new technology or pattern decision |
+| `docs/adr/001-python-for-inference-pipelines.md` | Rationale for Python 3.10+ and pyproject.toml per project |
+| `docs/adr/002-dotnet-blazor-for-dashboard.md` | Rationale for .NET 10 Blazor Server + SignalR; API boundary with Python services |
+| `docs/adr/003-ollama-for-local-llm.md` | Ollama model sizing constraints (must fit in ~6 GB headroom) |
+| `docs/adr/005-industrial-protocol-integration.md` | OPC-UA + MQTT as primary protocols; topic convention; QoS defaults |
+| `docs/setup/jetson-setup.md` | Jetson Orin Nano provisioning guide |
+| `docs/setup/development.md` | Local dev environment setup (cross-platform) |
 
-## Key Constraints
+---
 
-- **Memory:** 8 GB unified — CPU and GPU share it. LLM models must leave headroom for OS and inference runtime.
-- **Architecture:** Jetson is `linux/arm64`. GPU libraries (TensorRT, CUDA) are only available on-device or in L4T containers.
-- **Python GPU libs:** On a dev machine, expect CPU-only fallbacks or skip GPU-dependent tests.
-- **Model weights:** Never commit weights (`.pt`, `.onnx`, `.engine`, `.gguf`, `.bin`, `.safetensors` are gitignored). Use download scripts under `models/download/`.
-- **`shared/`:** Only add code here when two or more projects genuinely share it — not speculatively.
+## Persistent Decisions
 
-## Python Standards (for this repo)
+| Date | Decision | Rationale |
+|---|---|---|
+| 2026-03-07 | Python 3.10+ with pyproject.toml for all inference/sensor pipelines | JetPack ships first-class Python ML bindings; broad ecosystem support (ADR-001) |
+| 2026-03-07 | .NET 10 Blazor Server (SignalR) for monitoring dashboard | Real-time push without a separate WebSocket server; C# throughout UI (ADR-002) |
+| 2026-03-07 | Ollama for on-device LLM; GGUF quantized models ≤ ~6 GB | Keeps GPU memory headroom for OS + inference runtime (ADR-003) |
+| 2026-03-07 | Docker with NVIDIA L4T base images; --platform linux/arm64 for cross-builds | Reproducible arm64 builds from x86 dev machines (ADR-004) |
+| 2026-03-07 | OPC-UA (asyncua) + MQTT (aiomqtt) as primary industrial protocols; Modbus TCP as legacy fallback | Async-native libraries; OPC-UA is the modern standard (ADR-005) |
+| 2026-03-07 | MQTT topic convention: `jetson/{project}/{device_id}/{measurement}` | Supports multiple physical devices per project (ADR-005) |
+| 2026-03-07 | Jetson is always a consumer of PLC data — never a PLC programmer | Safety boundary: AI inference only; no write-back to field devices |
+| 2026-03-07 | No cross-imports between projects/ sub-directories | Each project must deploy independently |
 
-- Use built-in generic types — `list[str]`, `type | None` — not `List`, `Optional` from `typing`. Use `from __future__ import annotations` for forward references.
-- Type hints on all function signatures; Pydantic v2 for validation and settings
-- `pathlib.Path` over `os.path`
-- `async def` / `asyncio` for I/O-bound work (sensor polling, HTTP calls)
-- Prompt templates live in versioned files under a `prompts/` directory — not inline f-strings
-- Pin all ML/AI dependency versions explicitly in `pyproject.toml`
+---
 
-## .NET Standards (for this repo)
+## Open Loops
 
-- .NET 10, nullable reference types enabled, warnings as errors
-- Blazor Server with SignalR for real-time metric streaming
-- Vertical slice feature folders under `Features/` — not layer folders
-- `CancellationToken` propagated through all async call chains
+- [ ] Which project to scaffold first — `sensor-pipeline`, `visual-inspection`, or `industrial-gateway`?
+- [ ] Persistence layer: where do processed metrics get stored — InfluxDB, SQLite, in-memory only?
+- [ ] CI/CD: GitHub Actions for arm64 cross-build + test?
+- [ ] Dashboard ↔ Python API boundary: REST or gRPC? (ADR-002 flags this as needed)
+- [ ] SparkplugB (MQTT payload schema): worth adding once baseline MQTT is working (flagged in ADR-005)?
 
-## Industrial Protocols
+---
 
-These protocols are first-class learning targets. An agent working in this repo must understand them conceptually before generating code that touches them.
+## Team
 
-### OPC-UA (IEC 62541) — "REST for factory equipment"
+| Name | Role | Notes |
+|---|---|---|
+| Michael K. Alber | Sole developer | Reviewer and decision-maker on all changes |
 
-OPC-UA is the industrial standard for secure, reliable, platform-independent data exchange between devices and software.
+---
 
-**Core concepts:**
-- **Address Space** — A tree of *Nodes* hosted by an OPC-UA Server. Every data point lives at a Node.
-- **NodeId** — Unique identifier: `ns=2;s=PLC1.Tank1.Temperature`
-- **Namespace** — Logical scope: ns=0 is OPC-UA standard; ns=1+ are vendor/device-specific.
-- **Subscriptions / MonitoredItems** — Server pushes changes to subscribed clients; avoid polling.
-- **Security** — Built-in signing, encryption, X.509 certs, user auth. Never disable in production.
-- **Transport** — Binary TCP `opc.tcp://host:4840` (standard).
+## Available Tools
 
-**Python library:** `asyncua` — always `async`/`await`.
+- **grounded-code-mcp** — Local RAG knowledge base. Use `search_knowledge` and `search_code_examples` before generating code in any supported language. Collections relevant to this project: `edge_ai`, `automation`, `python`, `dotnet`, `robotics`, `architecture`.
+
+---
+
+## Project Boot Ritual
+
+At the start of every session:
+
+1. Read this file (`AGENTS.md`), `intent.md`, and `constraints.md`.
+2. No Jira/Confluence — confirm the active task with the user directly.
+3. Confirm context — state: current phase (Discovery), active task (if any), top 3 constraints, open loops.
+4. Do NOT begin work until context is confirmed.
+
+---
+
+## Python Standards (Project-Specific)
+
+- Use built-in generic types: `list[str]`, `dict[str, int]`, `X | None` — never `List`, `Optional`, `Dict` from `typing`. Use `from __future__ import annotations` for forward references.
+- Type hints on all function signatures; Pydantic v2 for settings and data validation.
+- `pathlib.Path` over `os.path`.
+- `async def` / `asyncio` for all I/O-bound work (sensor polling, HTTP calls, protocol clients).
+- Prompt templates live in versioned files under a `prompts/` directory — not inline f-strings.
+- Pin all ML/AI dependency versions explicitly in `pyproject.toml`.
+
+---
+
+## .NET Standards (Project-Specific)
+
+- .NET 10, nullable reference types enabled, warnings as errors.
+- Blazor Server with SignalR for real-time metric streaming.
+- Vertical slice feature folders under `Features/` — not layer folders.
+- `CancellationToken` propagated through all async call chains.
+
+---
+
+## Industrial Protocol Reference
+
+### OPC-UA (IEC 62541)
+
+**Agent rules:**
+- Always use subscriptions over polling for real-time data.
+- NodeIds belong in a Pydantic settings model or `config/nodes.yaml` — never hardcoded.
+- Always handle `asyncio` task cancellation for clean shutdown.
+- Security mode `SignAndEncrypt` is the target for production; `None` is acceptable in local dev only.
+
 ```python
 from asyncua import Client
 async with Client(url="opc.tcp://192.168.1.10:4840") as client:
@@ -121,50 +207,37 @@ async with Client(url="opc.tcp://192.168.1.10:4840") as client:
     value = await node.read_value()
 ```
 
+### MQTT (ISO/IEC 20922)
+
 **Agent rules:**
-- Always use subscriptions over polling for real-time data.
-- Never hardcode NodeIds — put them in a Pydantic settings model or config file.
-- Always propagate `CancellationToken`-equivalent (`asyncio.Event` / task cancellation) for clean shutdown.
+- Topic convention: `jetson/{project}/{device_id}/{measurement}` (e.g., `jetson/industrial-gateway/plc1/tank_level`)
+- Topic strings are module-level constants — never inline string literals.
+- QoS is a conscious choice — document reasoning inline:
+  - `0` — high-frequency telemetry (>10 Hz); occasional loss acceptable
+  - `1` — process events, state changes (default)
+  - `2` — commands / setpoints; avoid duplicate actuation
+- Always configure LWT for device online/offline status topics.
 
----
-
-### MQTT (ISO/IEC 20922) — Lightweight pub/sub
-
-A broker-mediated publish-subscribe protocol. A central broker routes messages by topic.
-
-**Core concepts:**
-- **Broker** — Mosquitto for local dev. Cloud: HiveMQ, AWS IoT Core, Azure IoT Hub.
-- **Topic** — Hierarchical string: `factory/line1/jetson/defect_count`. Wildcards: `+` (one level), `#` (multi-level).
-- **QoS:** 0=fire-and-forget, 1=at-least-once, 2=exactly-once. Default to QoS 1 for events.
-- **Retain** — Broker stores last message; new subscribers receive it immediately. Use for device status.
-- **LWT** — Pre-registered disconnect message. Always configure for device health topics.
-
-**Topic convention for this repo:** `jetson/{project}/{measurement}`
-- e.g., `jetson/sensor-pipeline/temperature`, `jetson/visual-inspection/defect_count`
-
-**Python library:** `aiomqtt` (async, preferred).
 ```python
 import aiomqtt
 async with aiomqtt.Client("192.168.1.5") as client:
-    await client.publish("jetson/sensor-pipeline/temperature", payload="42.3", qos=1)
+    await client.publish("jetson/industrial-gateway/plc1/tank_level", payload="42.3", qos=1)
 ```
 
-**Agent rules:**
-- Topic strings belong in constants or config — not scattered as string literals.
-- QoS must be a conscious choice — document the reasoning in code comments.
-- Always configure a LWT for device online/offline status.
+### PLC Integration
 
----
-
-### PLC Basics
-
-A **PLC** is a ruggedized industrial computer: Read Inputs → Execute Logic → Write Outputs → Repeat (1–100 ms scan cycle). Deterministic, fault-tolerant.
-
-**Ladder Logic** (IEC 61131-3) — Relay diagram metaphor:
-- Contacts `--[ ]--` (conditions) on the left energize a Coil `--( )--` (output) on the right.
-- Scan is cyclic — logic executes top-to-bottom every scan.
-
-**Integration protocols (Jetson as consumer only):**
+**Data flow:**
+```
+Field Devices (PLCs, sensors)
+    | OPC-UA subscription / Modbus TCP poll
+    v
+industrial-gateway (Jetson)
+    | MQTT publish  QoS 1
+    v
+MQTT Broker (Mosquitto)
+    +--- monitoring-dashboard (subscriber)
+    +--- anomaly-detection (subscriber)
+```
 
 | Protocol | Port | Python Library | Use |
 |---|---|---|---|
@@ -173,14 +246,7 @@ A **PLC** is a ruggedized industrial computer: Read Inputs → Execute Logic →
 | EtherNet/IP | TCP/UDP | `pycomm3` | Rockwell/Allen-Bradley |
 | Siemens S7 | TCP 102 | `python-snap7` | Siemens S7 family |
 
-**Modbus register types:** Coils (1-bit R/W), Discrete Inputs (1-bit R), Input Registers (16-bit R), Holding Registers (16-bit R/W).
-
-**Data flow mental model:**
-```
-PLC (field devices) → OPC-UA / Modbus TCP → Jetson AI → MQTT → Dashboard / Cloud
-```
-
 **Agent rules:**
-- The Jetson is always a *consumer* of PLC data — never a PLC programmer.
-- Modbus register addresses and OPC-UA NodeIds are configuration, not constants in code.
-- Simulate PLC data in tests — never require real hardware for unit tests.
+- Jetson is always a *consumer* of PLC data — never a PLC programmer.
+- Modbus register addresses and OPC-UA NodeIds are configuration, not code constants.
+- Simulate PLC data in tests — never require real hardware for unit or integration tests.
